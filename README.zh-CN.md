@@ -212,3 +212,7 @@ out/               产物（gitignore）
 
 MIT（见 LICENSE）。内核 solidcraft-cli 为 MIT OR Apache-2.0，oracle 用 FreeCAD（LGPL-2.1），
 仅作为独立验证进程调用，不随产物分发。
+
+---
+
+关键词：solidcraft、solidcraft-cli、CAD 内核、STEP 导出、AP242、参数化 CAD、spec 驱动建模、FreeCAD/OCCT 交叉验证、确定性出件。

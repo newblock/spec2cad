@@ -201,3 +201,7 @@ out/               Artifacts (gitignored)
 ## License
 
 MIT (see LICENSE). The solidcraft-cli kernel is MIT OR Apache-2.0; the FreeCAD oracle (LGPL-2.1) is invoked as a separate verification process only and is not distributed with the artifacts.
+
+---
+
+Keywords: solidcraft, solidcraft-cli, CAD kernel, STEP export, AP242, parametric CAD, spec-driven geometry, FreeCAD OCCT verification, deterministic part generation.
