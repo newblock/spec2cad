@@ -1,0 +1,27 @@
+# 板 80x50x6 + 2x3 网格孔 Ø8
+# V = 80*50*6 - 6*pi*16*6 = 24000 - 1809.557 = 22190.443
+[part]
+name = "plate-grid"
+units = "mm"
+[params]
+L = 80.0
+W = 50.0
+T = 6.0
+D = 8.0
+[[build]]
+op = "box"
+length = "L"
+width = "W"
+height = "T"
+anchor = "corner"
+[[build]]
+op = "holes"
+face = "XY"
+diameter = "D"
+through = "T"
+[build.pattern]
+type = "grid"
+origin = [20.0, 15.0]
+spacing = [20.0, 20.0]
+nx = 3
+ny = 2

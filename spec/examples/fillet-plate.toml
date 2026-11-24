@@ -1,0 +1,20 @@
+# 板 60x40x5 + 4 竖边 R6 圆角
+# V = 12000 - 4*36*(1-pi/4)*5 = 12000 - 154.507 = 11845.493；圆柱面 = 4
+[part]
+name = "fillet-plate"
+units = "mm"
+[params]
+L = 60.0
+W = 40.0
+T = 5.0
+R = 6.0
+[[build]]
+op = "box"
+length = "L"
+width = "W"
+height = "T"
+anchor = "corner"
+[[build]]
+op = "fillet"
+edges = "vertical"
+radius = "R"

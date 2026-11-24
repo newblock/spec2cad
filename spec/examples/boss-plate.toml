@@ -1,0 +1,23 @@
+# 板 60x40x5 + 凸台 Ø24 h12（join）
+# V = 12000 + pi*144*12 = 12000 + 5428.672 = 17428.672；圆柱面 = 1
+[part]
+name = "boss-plate"
+units = "mm"
+[params]
+L = 60.0
+W = 40.0
+T = 5.0
+BD = 24.0
+BH = 12.0
+[[build]]
+op = "box"
+length = "L"
+width = "W"
+height = "T"
+anchor = "corner"
+[[build]]
+op = "cylinder"
+base = [30.0, 20.0, 5.0]
+diameter = "BD"
+height = "BH"
+operation = "join"

@@ -1,0 +1,20 @@
+# 垫圈：Ø60 圆盘 h6，中心 Ø30 通孔（cylinder cut）
+# V = pi*900*6 - pi*225*6 = 16964.601 - 4241.150 = 12723.451；圆柱面 = 2
+[part]
+name = "washer"
+units = "mm"
+[params]
+OD = 60.0
+ID = 30.0
+T = 6.0
+[[build]]
+op = "cylinder"
+base = [0.0, 0.0, 0.0]
+diameter = "OD"
+height = "T"
+[[build]]
+op = "cylinder"
+base = [0.0, 0.0, 0.0]
+diameter = "ID"
+height = "T"
+operation = "cut"

@@ -1,0 +1,24 @@
+# L 支架：底板 60x40x6 + 立板 6x40x30（join）
+# V = 14400 + 7200 = 21600；bbox = 60 x 40 x 36
+[part]
+name = "bracket-l"
+units = "mm"
+[params]
+L = 60.0
+W = 40.0
+TB = 6.0
+HT = 30.0
+[[build]]
+op = "box"
+length = "L"
+width = "W"
+height = "TB"
+anchor = "corner"
+[[build]]
+op = "box"
+length = "TB"
+width = "W"
+height = "HT"
+anchor = "corner"
+at = [0.0, 0.0, 6.0]
+operation = "join"

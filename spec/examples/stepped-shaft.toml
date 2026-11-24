@@ -1,0 +1,21 @@
+# 阶梯轴：Ø30 h20 + Ø18 h15（join）
+# V = pi*225*20 + pi*81*15 = 14137.167 + 3817.035 = 17954.202；圆柱面 = 2
+[part]
+name = "stepped-shaft"
+units = "mm"
+[params]
+D1 = 30.0
+H1 = 20.0
+D2 = 18.0
+H2 = 15.0
+[[build]]
+op = "cylinder"
+base = [0.0, 0.0, 0.0]
+diameter = "D1"
+height = "H1"
+[[build]]
+op = "cylinder"
+base = [0.0, 0.0, 20.0]
+diameter = "D2"
+height = "H2"
+operation = "join"

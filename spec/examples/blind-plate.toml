@@ -1,0 +1,23 @@
+# 板 60x40x10 + 盲孔 Ø12 深 3（从顶面切）
+# V = 24000 - pi*36*3 = 24000 - 339.292 = 23660.708；圆柱面 = 1
+[part]
+name = "blind-plate"
+units = "mm"
+[params]
+L = 60.0
+W = 40.0
+T = 10.0
+D = 12.0
+DEP = 3.0
+[[build]]
+op = "box"
+length = "L"
+width = "W"
+height = "T"
+anchor = "corner"
+[[build]]
+op = "holes"
+face = "XY"
+diameter = "D"
+depth = "DEP"
+at = [[30.0, 20.0]]

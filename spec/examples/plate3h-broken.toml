@@ -1,0 +1,25 @@
+# 负例：故意让孔落在板边界/外面（板角在原点，孔却按"板居中"写）
+# 几何看起来正常，体积却只少了一个孔的 1/4 —— L1 必须抓住。
+[part]
+name = "plate3h-broken"
+units = "mm"
+
+[params]
+L = 60.0
+W = 40.0
+T = 5.0
+D = 10.0
+
+[[build]]
+op = "box"
+length = "L"
+width = "W"
+height = "T"
+anchor = "corner"
+
+[[build]]
+op = "holes"
+face = "XY"
+diameter = "D"
+through = "T"
+at = [[15.0, 0.0], [-15.0, 0.0], [0.0, 15.0]]

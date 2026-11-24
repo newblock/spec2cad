@@ -1,0 +1,31 @@
+# 板 60x40x5 + 3 个 Ø10 通孔（显式坐标）
+# 解析式期望体积 = L*W*T - 3*pi*(D/2)^2*T = 12000 - 1178.097 = 10821.903
+
+[part]
+name = "plate3h"
+units = "mm"
+
+[params]
+L = 60.0
+W = 40.0
+T = 5.0
+D = 10.0
+
+[[build]]
+op = "box"
+length = "L"
+width = "W"
+height = "T"
+anchor = "corner"        # 显式锚点：corner = 角点在原点（内核默认）
+
+[[build]]
+op = "holes"
+face = "XY"
+diameter = "D"
+through = "T"            # 通孔；v0 要求等于该方向板厚
+at = [[15.0, 20.0], [45.0, 20.0], [30.0, 10.0]]
+
+[checks]
+volume = "auto"
+bbox = "auto"
+cylinders = "auto"

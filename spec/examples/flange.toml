@@ -1,0 +1,26 @@
+# 法兰 Ø80x10 + 6xØ10 圆周孔（R=28）
+# V = pi*1600*10 - 6*pi*25*10 = 50265.482 - 4712.389 = 45553.093
+# 圆柱面 = 1（外圆）+ 6（孔）= 7
+[part]
+name = "flange"
+units = "mm"
+[params]
+OD = 80.0
+T = 10.0
+D = 10.0
+R = 28.0
+[[build]]
+op = "cylinder"
+base = [0.0, 0.0, 0.0]
+diameter = "OD"
+height = "T"
+[[build]]
+op = "holes"
+face = "XY"
+diameter = "D"
+through = "T"
+[build.pattern]
+type = "circular"
+center = [0.0, 0.0]
+radius = "R"
+count = 6

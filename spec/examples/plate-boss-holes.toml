@@ -1,0 +1,32 @@
+# 板 60x40x6 + 凸台 Ø30 h10 + 4xØ8 通孔（穿透凸台与板，总高 16）
+# V = 14400 + pi*225*10 - 4*pi*16*16 = 14400 + 7068.583 - 3216.991 = 18251.593
+# 圆柱面 = 1（凸台）+ 4（孔）= 5
+[part]
+name = "plate-boss-holes"
+units = "mm"
+[params]
+L = 60.0
+W = 40.0
+T = 6.0
+BD = 30.0
+BH = 10.0
+D = 8.0
+H = 16.0
+[[build]]
+op = "box"
+length = "L"
+width = "W"
+height = "T"
+anchor = "corner"
+[[build]]
+op = "cylinder"
+base = [30.0, 20.0, 6.0]
+diameter = "BD"
+height = "BH"
+operation = "join"
+[[build]]
+op = "holes"
+face = "XY"
+diameter = "D"
+through = "H"
+at = [[24.0, 20.0], [36.0, 20.0], [30.0, 14.0], [30.0, 26.0]]
