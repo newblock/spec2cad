@@ -1,212 +1,203 @@
-# spec2cad — 一份 spec，确定性出件
+# spec2cad — One spec, deterministic part
 
-把**人写/LLM 写的规格（spec）**编译成 **STEP**，并当场用两个独立来源交叉验证（L1 闸门）。
+English | [简体中文](README.zh-CN.md)
+
+Compile a **human- or LLM-written specification (spec)** into a **STEP** file, and cross-validate it on the spot against two independent sources (the L1 gate).
 
 ```
-spec.toml ──compile──▶ solidcraft 命令脚本 ──run──▶ part.step
+spec.toml ──compile──▶ solidcraft command script ──run──▶ part.step
              │                        │
-             │ 解析式期望              └── 内核自检 ──┐
-             │ （体积/bbox/孔位                      │
-             │  由公式推导，不抄答案）                 ├── L1 断言（一致性闸门）
-             └──────────────────────  FreeCAD/OCCT 独立读回 ┘
-                                                      ▼
-                                        report.json（逐项 PASS/FAIL + 偏差）
+             │ analytic expectations  └── kernel self-check ──┐
+             │ (volume/bbox/hole                              │
+             │  positions derived by                          ├── L1 assertions (consistency gate)
+             │  formula, never copied)                        │
+             └────────────────────  FreeCAD/OCCT independent read-back ┘
+                                                             ▼
+                                              report.json (itemized PASS/FAIL + deviations)
 ```
 
-LLM（如果参与）只负责"人话 → spec"这一步；几何由内核算，不由模型猜。
+If an LLM is involved at all, it only handles "plain language → spec"; geometry is computed by the kernel, never guessed by a model.
 
-## 为什么是这条路
+## Why this path
 
-| 路径 | 确定性 | 耗时 | 可复现 | 可测试 | 结论 |
+| Path | Deterministic | Time | Reproducible | Testable | Verdict |
 |---|---|---|---|---|---|
-| **spec → 命令脚本 → `solidcraft-cli run`** | 完全确定 | **0.1–0.4 s/件** | 字节级可复现 | CI 可跑 | **主路径** |
-| LLM 直接吐 STEP 文本 | — | — | — | 语法/拓扑必崩（实测被双内核拒收） | 不采用 |
+| **spec → command script → `solidcraft-cli run`** | Fully | **0.1–0.4 s/part** | Byte-level | CI-friendly | **Main path** |
+| LLM emitting STEP text directly | — | — | — | Syntax/topology always breaks (both kernels rejected it in tests) | Rejected |
 
-关键分工：**LLM 只写 spec（参数化文本），几何由内核算**。spec 里的期望值由解析式
-推导（`V = L*W*T − n·π·(D/2)²·T`），不手抄实测值——否则闸门就退化成"抄答案"。
+The division of labor: **the LLM only writes the spec (parameterized text); the kernel computes the geometry**. Expected values in the spec are derived analytically (`V = L*W*T − n·π·(D/2)²·T`), never copied from measured results — otherwise the gate degenerates into "copying the answer key".
 
-## 快速开始
+## Quick start
 
 ```bash
-# 1) 装内核（一次性；Linux x86_64 / macOS universal 预编译）
+# 1) Install the kernel (once; prebuilt for Linux x86_64 / macOS universal)
 ./tools/install-solidcraft.sh
 
-# 2) 出件 + 双源验证
+# 2) Build + dual-source verification
 PYTHONPATH=src python3 -m spec2cad build spec/examples/plate3h.toml -o out/
 
-# 产物
-out/plate3h.step           # 几何事实源（AP242）
-out/plate3h.commands.json  # 编译出的内核脚本（可 diff / 可回放）
-out/plate3h.report.json    # L1 逐项断言报告
+# Artifacts
+out/plate3h.step           # Geometry source of truth (AP242)
+out/plate3h.commands.json  # Compiled kernel script (diffable / replayable)
+out/plate3h.report.json    # Itemized L1 assertion report
 ```
 
-本机实测（macOS arm64，solidcraft-cli 0.47.0 + FreeCAD 1.1.3 oracle）：
+Measured on this machine (macOS arm64, solidcraft-cli 0.47.0 + FreeCAD 1.1.3 oracle):
 
 ```
-spec   : spec/examples/plate3h.toml  (7 条内核命令)
+spec   : spec/examples/plate3h.toml  (7 kernel commands)
 STEP   : out/plate3h.step  (18190 bytes, 0.187s)
-L1 闸门：24/24 通过
+L1 gate: 24/24 passed
 ```
 
-24 项断言 = 主内核 13 项（体积 / bbox 六面 / 孔数 / 闭合 / 实体数）+ oracle 8 项
-（体积 / 三向尺寸 / 孔数 / 有效 / 实体数）+ 孔位 L1.5 每孔一条 + 跨源 1 项。
+24 assertions = 13 kernel-side (volume / six bbox faces / hole count / closed / body count) + 8 oracle-side (volume / three sizes / hole count / valid / solid count) + one hole-position assertion per hole (L1.5) + one cross-source check.
 
-## L1 闸门
+## The L1 gate
 
-三类来源必须一致，缺证据不算通过：
+Three sources must agree; missing evidence does not count as passing:
 
-| 来源 | 是什么 | 容差 |
+| Source | What it is | Tolerances |
 |---|---|---|
-| expected | spec 解析式推导（不抄答案） | — |
-| kernel | solidcraft 自己量自己 | 体积相对 1e-6；bbox 绝对 1e-6 mm；圆柱面数精确相等 |
-| oracle | FreeCAD/OCCT 独立读回同一个 STEP 再量 | 同上；孔位轴心绝对 1e-6 mm（L1.5） |
+| expected | Derived analytically from the spec (never copied) | — |
+| kernel | solidcraft measures its own output | volume rel 1e-6; bbox abs 1e-6 mm; cylinder count exact |
+| oracle | FreeCAD/OCCT reads the same STEP back and measures independently | same; hole-axis position abs 1e-6 mm (L1.5) |
 
-断言清单（逐项写进 report.json）：
+Assertion list (each item lands in report.json):
 
-| 断言 | 内容 |
+| Assertion | Checks |
 |---|---|
-| `volume@kernel` / `volume@oracle` | 体积 vs 解析式（相对 1e-6） |
-| `size_x/y/z@*`、`bbox_min/max_*@kernel` | 包围盒逐面（绝对 1e-6 mm） |
-| `cylinders@kernel` / `cylinders@oracle` | 圆柱面数 == 期望孔数（+外圆），精确相等 |
-| `closed@kernel` / `valid@oracle` | 实体闭合 / 有效 |
-| `bodies@kernel` / `solids@oracle` | 恰好 1 个实体 |
-| `hole@(x,y)`（L1.5） | 每个孔：OCCT 圆柱面轴心与 spec 声明重合（1e-6 mm） |
-| `volume@kernel==oracle` | 两个来源互相一致 |
+| `volume@kernel` / `volume@oracle` | volume vs analytic expectation (rel 1e-6) |
+| `size_x/y/z@*`, `bbox_min/max_*@kernel` | bounding box, face by face (abs 1e-6 mm) |
+| `cylinders@kernel` / `cylinders@oracle` | cylindrical-face count == expected hole count (+ outer rim), exact |
+| `closed@kernel` / `valid@oracle` | solid is closed / valid |
+| `bodies@kernel` / `solids@oracle` | exactly 1 solid |
+| `hole@(x,y)` (L1.5) | each hole: OCCT cylinder axis coincides with the spec-declared position (1e-6 mm) |
+| `volume@kernel==oracle` | the two sources agree with each other |
 
-**L1.5 为什么单独立一条**：孔挪了位置但还在实体内部时，体积和孔数都不变——
-只有孔位断言能抓住"体积对、孔不对"的错件。
+**Why L1.5 is a separate assertion**: if a hole moves but stays inside the solid, both volume and hole count stay unchanged — only the position assertion catches a part that is "right by volume, wrong by holes".
 
-### 负例（闸门的牙齿）
+### Negative example (the gate's teeth)
 
-`spec/examples/plate3h-broken.toml`：孔心写到板边界外，体积只差 1/4 个孔——
-肉眼看着正常，闸门拦得住。本机实测：
+`spec/examples/plate3h-broken.toml`: a hole center is written outside the plate boundary; the volume is off by only a quarter of one hole — looks fine to the eye, but the gate catches it. Measured:
 
-| 断言 | 期望 | 实测 | 结果 |
+| Assertion | Expected | Actual | Result |
 |---|---|---|---|
 | volume@kernel | 10821.902755 | 11607.300918 | FAIL |
 | cylinders@kernel | 3 | 2 | FAIL |
 | volume@oracle | 10821.902755 | 11607.300918 | FAIL |
-| hole@(-15.000,0.000) | 轴心重合 | 没有对应圆柱面 | FAIL |
+| hole@(-15.000,0.000) | axis coincides | no matching cylinder face | FAIL |
 
-退出码 1。**闸门不吃素**：几何看着正常、数值错，一样过不去。
+Exit code 1. **The gate does not go soft**: geometry that looks normal but measures wrong still fails.
 
-## 基准件集（11 件 / 10 正例 + 1 负例）
+## Benchmark set (11 specs / 10 positive + 1 negative)
 
 ```bash
 PYTHONPATH=src python3 -m spec2cad bench spec/examples -o out/bench
 ```
 
-本机实测（2026-11，全部三源一致；负例被拦算符合预期）：
+Measured on this machine (2026-11; all three sources agree; the blocked negative counts as expected):
 
-| spec | 负例 | 期望体积 | 主内核 | OCCT | 圆柱面 | 耗时 | 结果 |
+| spec | Negative | Expected volume | Kernel | OCCT | Cyl. faces | Time | Result |
 |---|---|---|---|---|---|---|---|
-| blind-plate | 否 | 23660.708 | 23660.708 | 23660.708 | 1 | 98 ms | PASS |
-| boss-plate | 否 | 17428.672 | 17428.672 | 17428.672 | 1 | 140 ms | PASS |
-| bracket-l | 否 | 21600.000 | 21600.000 | 21600.000 | 0 | 79 ms | PASS |
-| fillet-plate | 否 | 11845.487 | 11845.487 | 11845.487 | 4 | 337 ms | PASS |
-| flange | 否 | 45553.093 | 45553.093 | 45553.093 | 7 | 385 ms | PASS |
-| plate-boss-holes | 否 | 18251.593 | 18251.593 | 18251.593 | 5 | 332 ms | PASS |
-| plate-grid | 否 | 22190.443 | 22190.443 | 22190.443 | 6 | 309 ms | PASS |
-| plate3h-broken | 是 | 10821.903 | 11607.301 | 11607.301 | 2 | 130 ms | 拦住了（符合预期） |
-| plate3h | 否 | 10821.903 | 10821.903 | 10821.903 | 3 | 179 ms | PASS |
-| stepped-shaft | 否 | 17954.202 | 17954.202 | 17954.202 | 2 | 160 ms | PASS |
-| washer | 否 | 12723.450 | 12723.450 | 12723.450 | 2 | 144 ms | PASS |
+| blind-plate | no | 23660.708 | 23660.708 | 23660.708 | 1 | 98 ms | PASS |
+| boss-plate | no | 17428.672 | 17428.672 | 17428.672 | 1 | 140 ms | PASS |
+| bracket-l | no | 21600.000 | 21600.000 | 21600.000 | 0 | 79 ms | PASS |
+| fillet-plate | no | 11845.487 | 11845.487 | 11845.487 | 4 | 337 ms | PASS |
+| flange | no | 45553.093 | 45553.093 | 45553.093 | 7 | 385 ms | PASS |
+| plate-boss-holes | no | 18251.593 | 18251.593 | 18251.593 | 5 | 332 ms | PASS |
+| plate-grid | no | 22190.443 | 22190.443 | 22190.443 | 6 | 309 ms | PASS |
+| plate3h-broken | yes | 10821.903 | 11607.301 | 11607.301 | 2 | 130 ms | Blocked (as expected) |
+| plate3h | no | 10821.903 | 10821.903 | 10821.903 | 3 | 179 ms | PASS |
+| stepped-shaft | no | 17954.202 | 17954.202 | 17954.202 | 2 | 160 ms | PASS |
+| washer | no | 12723.450 | 12723.450 | 12723.450 | 2 | 144 ms | PASS |
 
-**11/11 符合预期**：10 件三源一致（解析式 = 主内核 = OCCT，偏差在 1e-6 闸门内），
-1 件负例被拦。输出 STEP 为 AP242（`FILE_SCHEMA AP242_MANAGED_MODEL_BASED_3D_ENGINEERING_MIM_LF`）。
+**11/11 as expected**: 10 parts agree across all three sources (analytic = kernel = OCCT, within the 1e-6 gate), 1 negative is blocked. Output STEP is AP242 (`FILE_SCHEMA AP242_MANAGED_MODEL_BASED_3D_ENGINEERING_MIM_LF`).
 
-## 解析式模型（实测校准）
+## Analytic model (calibrated by measurement)
 
-| op | 体积 | 包围盒 | 圆柱面 |
+| op | Volume | Bounding box | Cyl. faces |
 |---|---|---|---|
-| `box` | ±L·W·H | 角点 `at..at+(L,W,H)` / 居中 `at±(L/2,W/2,H/2)` | - |
-| `cylinder` | ±π·r²·h | **base 是底面圆心**：xy 各 ±r，z 为 `base_z..+h` | +1 |
-| `holes` | −n·π·r²·d（d = 板厚 or 盲孔 depth） | 不变 | +n |
-| `fillet`（竖边） | −4·r²·(1−π/4)·H | 不变 | +4 |
+| `box` | ±L·W·H | corner `at..at+(L,W,H)` / centered `at±(L/2,W/2,H/2)` | - |
+| `cylinder` | ±π·r²·h | **base is the bottom-circle center**: xy ±r, z from `base_z..+h` | +1 |
+| `holes` | −n·π·r²·d (d = plate thickness or blind depth) | unchanged | +n |
+| `fillet` (vertical edges) | −4·r²·(1−π/4)·H | unchanged | +4 |
 
-## spec 形态（v1）
+## Spec format (v1)
 
 ```toml
 [part]
 name = "plate3h"
 units = "mm"
 
-[params]                 # 尺寸参数：spec 里唯一允许出现数字的地方
+[params]                 # dimensions: the only place numbers may appear in a spec
 L = 60.0
 W = 40.0
 T = 5.0
 D = 10.0
 
 [[build]]
-op = "box"               # 长方体，anchor="corner" 角点锚在 at / "center" 居中
+op = "box"               # box; anchor="corner" pins the corner at `at` / "center" centers it
 length = "L"
 width = "W"
 height = "T"
 
 [[build]]
-op = "holes"             # 孔：显式坐标 / 圆周均布 / 网格，通孔 through 或盲孔 depth
+op = "holes"             # holes: explicit coords / circular / grid; through or blind depth
 face = "XY"
 diameter = "D"
-through = "T"            # 通孔必须等于该方向总高；盲孔用 depth
+through = "T"            # through must equal the total height in that direction; blind uses depth
 at = [[15.0, 20.0], [45.0, 20.0], [30.0, 10.0]]
 
-# 其他可用的 op
+# Other available ops
 #   [[build]] op = "cylinder"  base = [x,y,z]  diameter/radius  height  operation = "join"|"cut"
 #   [[build]] op = "fillet"    edges = "vertical"  radius = "R"
 #   [build.pattern]            type = "circular"|"grid"  ...
 
-[checks]                 # 期望值由 spec 解析式算出，不手抄
+[checks]                 # expectations are derived analytically from the spec, never copied
 volume = "auto"
 bbox = "auto"
 cylinders = "auto"
 ```
 
-设计铁律：
+Design rules:
 
-1. **spec 是唯一事实源**。编译器不读环境、不读上一轮产物、不猜默认值。
-   歧义（锚点、朝向、通孔/盲孔）必须显式写，缺了报错，不许自动补。
-2. **期望值必须解析式推导**，不许把实测值抄进 spec 当期望。
-   发现自己在改期望值去凑实测，先怀疑几何而不是改期望。
-3. **孔位单独立断言**（L1.5）：体积对、孔数对，孔挪了位置照样是错的。
-4. **oracle 缺失记 FAIL 而不是跳过通过**——缺证据不算通过（`--no-oracle` 只出件不出证据）。
-5. **零运行时依赖**：纯 Python 标准库 + 外挂二进制（solidcraft-cli / FreeCAD 只当 oracle）。
-6. **负例必须留**。`spec/examples/*-broken.toml` 是闸门的牙齿，改动 verify 后要重跑确认它仍被拦。
+1. **The spec is the single source of truth.** The compiler reads no environment, no previous artifacts, and guesses no defaults. Ambiguities (anchor, orientation, through vs blind) must be explicit; missing ones are errors — no silent filling.
+2. **Expected values must be derived analytically**, never copied from measurements into the spec. If you find yourself tuning expectations to match reality, suspect the geometry first, not the expectation.
+3. **Hole positions get their own assertion** (L1.5): volume right and hole count right is still wrong if a hole moved.
+4. **A missing oracle is a FAIL, not a skip** — no evidence does not count as passing (`--no-oracle` builds without producing evidence).
+5. **Zero runtime dependencies**: pure Python standard library + external binaries (solidcraft-cli; FreeCAD used only as the oracle).
+6. **Negative examples must stay**. `spec/examples/*-broken.toml` are the gate's teeth; after any change to verify, re-run and confirm they are still blocked.
 
-## 测试
+## Tests
 
 ```bash
-python3 -m unittest discover -s tests -t . -v   # 30 项；缺内核时端到端自动 skip，不假绿
+python3 -m unittest discover -s tests -t . -v   # 30 tests; e2e auto-skips when the kernel is absent — never fakes green
 ```
 
-覆盖：表达式求值 / spec 校验（锚点、通孔深度一致性、fillet 前置约束、负例语义）/
-解析式期望值 / 命令脚本编译产物 / solidcraft 端到端 / L1.5 孔位断言 / 负例拦截。
+Coverage: expression evaluation / spec validation (anchors, through-depth consistency, fillet preconditions, negative-example semantics) / analytic expectations / compiled command scripts / solidcraft end-to-end / L1.5 hole-position assertions / negative-example blocking.
 
-## 已知坑（实测踩出来的）
+## Known pitfalls (learned by measurement)
 
-- `solid.box` 的**角在原点，不居中**：要居中必须显式 `anchor = "center"`（编译器补平移）。
-  这是 L1 要抓的第一类歧义。
-- `solid.cylinder` 的 `base` 是**底面圆心**，不是角点：bbox 要 xy 各 ±r。
-  按角点算会出现"体积全对、bbox 全错"——体积对不代表模型对。
-- 孔落在板边界/外面时，体积可能只差 1/4 个孔——肉眼正常、数值错，L1 靠解析式才抓得住。
-- conda 环境的 FreeCAD 不在默认 `sys.path` 上：oracle 探针会自动把 `<env>/lib` 插进去再试；
-  也可用 `FREECAD_PYTHON` 显式指定。
+- `solid.box` anchors its **corner at the origin, not its center**: centering requires an explicit `anchor = "center"` (the compiler emits the translation). This is the first class of ambiguity L1 must catch.
+- `solid.cylinder`'s `base` is the **bottom-circle center**, not a corner: bbox spans xy ±r. Computing it from a corner yields "volume all correct, bbox all wrong" — a correct volume does not mean a correct model.
+- A hole on/over the plate boundary may change the volume by only a quarter of one hole — looks fine, measures wrong; L1 only catches this via the analytic expectation.
+- Conda-installed FreeCAD is not on the default `sys.path`: the oracle probe automatically inserts `<env>/lib` and retries; you can also set `FREECAD_PYTHON` explicitly.
 
-## 目录
+## Layout
 
 ```
-spec/examples/     基准件 spec（10 正例 + 1 负例，负例必须被闸门拦下）
-src/spec2cad/      spec 解析 / 编译 / 执行 / L1 验证
-  spec.py            spec 解析 + 解析式期望推导（不抄答案）
-  emit.py            spec -> solidcraft 命令脚本（JSON，可 diff / 可回放）
-  kernel.py          solidcraft-cli 出件 + FreeCAD/OCCT oracle 读回
-  verify.py          L1 / L1.5 断言
+spec/examples/     Benchmark specs (10 positive + 1 negative; the negative must be blocked by the gate)
+src/spec2cad/      Spec parsing / compilation / execution / L1 verification
+  spec.py            Spec parsing + analytic expectation derivation (never copied)
+  emit.py            spec -> solidcraft command script (JSON, diffable / replayable)
+  kernel.py          solidcraft-cli build + FreeCAD/OCCT oracle read-back
+  verify.py          L1 / L1.5 assertions
   cli.py             build / bench / report
-tests/             管线测试（缺内核时端到端自动 skip，不假绿）
-tools/             内核安装脚本
-out/               产物（gitignore）
+tests/             Pipeline tests (e2e auto-skips without a kernel — never fakes green)
+tools/             Kernel install script
+out/               Artifacts (gitignored)
 ```
 
 ## License
 
-MIT（见 LICENSE）。内核 solidcraft-cli 为 MIT OR Apache-2.0，oracle 用 FreeCAD（LGPL-2.1），
-仅作为独立验证进程调用，不随产物分发。
+MIT (see LICENSE). The solidcraft-cli kernel is MIT OR Apache-2.0; the FreeCAD oracle (LGPL-2.1) is invoked as a separate verification process only and is not distributed with the artifacts.
